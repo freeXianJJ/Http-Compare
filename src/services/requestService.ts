@@ -58,14 +58,20 @@ export class RequestService {
     return `${protocol}://${host}:${port}${url}`;
   }
 
-  private buildHeaders(service: ServiceConfig, apiConfig: ApiConfig): Record<string, string> {
+  private buildHeaders(service: ServiceConfig, apiConfig: ApiConfig, tokenType?: 'client' | 'user'): Record<string, string> {
     const headers: Record<string, string> = {};
 
-    if (service.token) {
+    // tokenType determines which token to attach (client/user). Backward-compatible: if tokenType not provided, use legacy `service.token`.
+    if (tokenType === 'client' && service.clientToken) {
+      headers['X-Client-Token'] = `Bearer ${service.clientToken}`;
+    } else if (tokenType === 'user' && service.userToken) {
+      headers['Authorization'] = `Bearer ${service.userToken}`;
+    } else if (service.token) {
       const tokenValue = service.tokenPrefix 
         ? `${service.tokenPrefix} ${service.token}`
         : service.token;
-      headers[service.tokenHeader] = tokenValue;
+      const headerName = service.tokenHeader || 'Authorization';
+      headers[headerName] = tokenValue;
     }
 
     apiConfig.headers
@@ -103,11 +109,12 @@ export class RequestService {
 
   async sendRequest(
     service: ServiceConfig,
-    apiConfig: ApiConfig
+    apiConfig: ApiConfig,
+    tokenType?: 'client' | 'user'
   ): Promise<{ request: RequestInfo; response: ResponseInfo }> {
     const startTime = Date.now();
     const url = this.buildUrl(service, apiConfig);
-    const headers = this.buildHeaders(service, apiConfig);
+    const headers = this.buildHeaders(service, apiConfig, tokenType);
     const body = this.buildBody(apiConfig);
 
     console.log('发送请求到:', url);
@@ -194,6 +201,7 @@ export class RequestService {
     newService: ServiceConfig,
     apiConfig: ApiConfig
   ) {
+    // default: no tokenType — legacy behavior
     const [oldResult, newResult] = await Promise.all([
       this.sendRequest(oldService, apiConfig),
       this.sendRequest(newService, apiConfig)

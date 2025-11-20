@@ -12,8 +12,12 @@ export default function CompareRunner() {
   const [apiListText, setApiListText] = useState('');
   const [oldHost, setOldHost] = useState('localhost');
   const [oldPort, setOldPort] = useState(80);
+  const [oldClientToken, setOldClientToken] = useState('');
+  const [oldUserToken, setOldUserToken] = useState('');
   const [newHost, setNewHost] = useState('localhost');
   const [newPort, setNewPort] = useState(8080);
+  const [newClientToken, setNewClientToken] = useState('');
+  const [newUserToken, setNewUserToken] = useState('');
   const [running, setRunning] = useState(false);
   const [results, setResults] = useState<any[]>([]);
   const [concurrency, setConcurrency] = useState<number>(20);
@@ -30,13 +34,15 @@ export default function CompareRunner() {
     }
   };
 
-  const buildServiceConfig = (host: string, port: number): ServiceConfig => ({
+  const buildServiceConfig = (host: string, port: number, clientToken?: string, userToken?: string): ServiceConfig => ({
     protocol: Protocol.HTTP,
     host,
     port,
     token: '',
     tokenPrefix: '',
-    tokenHeader: 'Authorization'
+    tokenHeader: 'Authorization',
+    clientToken: clientToken || undefined,
+    userToken: userToken || undefined
   });
 
   const startRun = async () => {
@@ -44,21 +50,26 @@ export default function CompareRunner() {
     if (apis.length === 0) return alert('请在文本框中粘贴 ApiConfig 数组（JSON）');
 
     setRunning(true);
-    const oldService = buildServiceConfig(oldHost, Number(oldPort));
-    const newService = buildServiceConfig(newHost, Number(newPort));
+    const oldService = buildServiceConfig(oldHost, Number(oldPort), oldClientToken, oldUserToken);
+    const newService = buildServiceConfig(newHost, Number(newPort), newClientToken, newUserToken);
 
     const runResults: any[] = [];
 
     // wrapper with retries
-    const sendWithRetry = async (api: ApiConfig) => {
+    const sendWithRetry = async (api: ApiConfig, tokenType: 'client' | 'user') => {
       let attempt = 0;
       let lastError: any = null;
       while (attempt <= retries) {
         attempt++;
         try {
           // respect per-request timeout by creating a race with a timeout promise
+          // request old/new pair with the given tokenType
           const race = await Promise.race([
-            requestService.sendDualRequests(oldService, newService, api),
+            (async () => {
+              const oldRes = await requestService.sendRequest(oldService, api, tokenType);
+              const newRes = await requestService.sendRequest(newService, api, tokenType);
+              return { oldService: oldRes, newService: newRes };
+            })(),
             new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), perRequestTimeoutMs))
           ]);
           return race as any;
@@ -83,19 +94,67 @@ export default function CompareRunner() {
           if (idx >= items.length) break;
           const api = items[idx];
           try {
-            const dual = await sendWithRetry(api);
-            const diff = diffService.compare(dual.oldService.response, dual.newService.response);
-            const item = {
-              id: `${api.id || api.name}-${Date.now()}-${idx}`,
-              apiConfig: api,
-              oldService: dual.oldService,
-              newService: dual.newService,
-              diffResult: diff,
-              timestamp: Date.now()
-            };
-            resultsArr.push(item);
-            // update UI progressively
-            setResults(prev => [...prev, item]);
+            // run client-token comparison
+            try {
+              const dualClient = await sendWithRetry(api, 'client');
+              const diffClient = diffService.compare(dualClient.oldService.response, dualClient.newService.response);
+              const itemClient = {
+                id: `${api.id || api.name}-client-${Date.now()}-${idx}`,
+                apiConfig: api,
+                tokenType: 'client',
+                oldService: dualClient.oldService,
+                newService: dualClient.newService,
+                diffResult: diffClient,
+                timestamp: Date.now()
+              };
+              resultsArr.push(itemClient);
+              setResults(prev => [...prev, itemClient]);
+            } catch (errClient) {
+              console.error('client-token 请求失败', api, errClient);
+              const item = {
+                id: `${api.id || api.name}-client-${Date.now()}-${idx}`,
+                apiConfig: api,
+                tokenType: 'client',
+                oldService: null,
+                newService: null,
+                diffResult: { identical: false, differences: [{ path: 'request', type: 'modified', oldValue: null, newValue: null }], summary: { statusMatch: false, bodyMatch: false, totalDiffs: 1 } },
+                timestamp: Date.now(),
+                error: String(errClient)
+              };
+              resultsArr.push(item);
+              setResults(prev => [...prev, item]);
+            }
+
+            // run user-token comparison
+            try {
+              const dualUser = await sendWithRetry(api, 'user');
+              const diffUser = diffService.compare(dualUser.oldService.response, dualUser.newService.response);
+              const itemUser = {
+                id: `${api.id || api.name}-user-${Date.now()}-${idx}`,
+                apiConfig: api,
+                tokenType: 'user',
+                oldService: dualUser.oldService,
+                newService: dualUser.newService,
+                diffResult: diffUser,
+                timestamp: Date.now()
+              };
+              resultsArr.push(itemUser);
+              setResults(prev => [...prev, itemUser]);
+            } catch (errUser) {
+              console.error('user-token 请求失败', api, errUser);
+              const item = {
+                id: `${api.id || api.name}-user-${Date.now()}-${idx}`,
+                apiConfig: api,
+                tokenType: 'user',
+                oldService: null,
+                newService: null,
+                diffResult: { identical: false, differences: [{ path: 'request', type: 'modified', oldValue: null, newValue: null }], summary: { statusMatch: false, bodyMatch: false, totalDiffs: 1 } },
+                timestamp: Date.now(),
+                error: String(errUser)
+              };
+              resultsArr.push(item);
+              setResults(prev => [...prev, item]);
+            }
           } catch (err) {
             console.error('请求失败', api, err);
             const item = {
@@ -132,12 +191,28 @@ export default function CompareRunner() {
         <input value={oldHost} onChange={e => setOldHost(e.target.value)} />
         <label style={{ marginLeft: 8 }}>Port: </label>
         <input value={String(oldPort)} onChange={e => setOldPort(Number(e.target.value))} style={{ width: 80 }} />
+        <div style={{ marginTop: 6 }}>
+          <label style={{ marginRight: 8 }}>Old Client Token:</label>
+          <input value={oldClientToken} onChange={e => setOldClientToken(e.target.value)} style={{ width: 300 }} />
+        </div>
+        <div style={{ marginTop: 6 }}>
+          <label style={{ marginRight: 8 }}>Old User Token:</label>
+          <input value={oldUserToken} onChange={e => setOldUserToken(e.target.value)} style={{ width: 300 }} />
+        </div>
       </div>
       <div style={{ marginBottom: 8 }}>
         <label>New Host: </label>
         <input value={newHost} onChange={e => setNewHost(e.target.value)} />
         <label style={{ marginLeft: 8 }}>Port: </label>
         <input value={String(newPort)} onChange={e => setNewPort(Number(e.target.value))} style={{ width: 80 }} />
+        <div style={{ marginTop: 6 }}>
+          <label style={{ marginRight: 8 }}>New Client Token:</label>
+          <input value={newClientToken} onChange={e => setNewClientToken(e.target.value)} style={{ width: 300 }} />
+        </div>
+        <div style={{ marginTop: 6 }}>
+          <label style={{ marginRight: 8 }}>New User Token:</label>
+          <input value={newUserToken} onChange={e => setNewUserToken(e.target.value)} style={{ width: 300 }} />
+        </div>
       </div>
 
       <div style={{ marginBottom: 8 }}>

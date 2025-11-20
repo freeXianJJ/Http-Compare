@@ -37,11 +37,12 @@ npm run dev
 - 如果有大量 endpoints（例如 200+），建议将并发调整为 10-30 并观察网络与目标服务负载。
 - 每次请求可配置超时时间（默认 30000ms）和重试次数（默认 1 次）。
 
-开发与测试
 
-- 核心服务逻辑位于 `src/services/requestService.ts` 与 `src/services/diffService.ts`，可直接在 UI 中调用。  
-- 单元测试：`jest`（针对服务函数），功能测试：`@testing-library/react` 或 Playwright（本地运行）。
+ 
+Token 配置
+
+- 在 CompareRunner UI 中可以为 `old` 与 `new` 服务分别配置 `clientToken` 与 `userToken`（均为 Bearer 类型）。
+- 在 UI 中填写后，工具会为每个 endpoint 分别使用 `clientToken` 与 `userToken` 发起对比（两组对比），并在结果中按 token 类型显示。
 
 后续说明
 
-- 本快速开始仅覆盖前端 UI 使用场景。若未来需要桌面写文件或 CLI/CI 集成，可作为后续扩展项实现。
