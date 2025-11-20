@@ -16,6 +16,9 @@ export default function CompareRunner() {
   const [newPort, setNewPort] = useState(8080);
   const [running, setRunning] = useState(false);
   const [results, setResults] = useState<any[]>([]);
+  const [concurrency, setConcurrency] = useState<number>(20);
+  const [retries, setRetries] = useState<number>(1);
+  const [perRequestTimeoutMs, setPerRequestTimeoutMs] = useState<number>(30000);
 
   const parseApiList = (): ApiConfig[] => {
     try {
@@ -46,27 +49,79 @@ export default function CompareRunner() {
 
     const runResults: any[] = [];
 
-    for (const api of apis) {
-      // 逐条运行以保持简单（可在后续替换为并发池）
-      try {
-        const dual = await requestService.sendDualRequests(oldService, newService, api);
-        const diff = diffService.compare(dual.oldService.response, dual.newService.response);
-        const item = {
-          id: `${api.id || api.name}-${Date.now()}`,
-          apiConfig: api,
-          oldService: dual.oldService,
-          newService: dual.newService,
-          diffResult: diff,
-          timestamp: Date.now()
-        };
-        runResults.push(item);
-        setResults(prev => [...prev, item]);
-      } catch (e: any) {
-        console.error('运行失败', e);
+    // wrapper with retries
+    const sendWithRetry = async (api: ApiConfig) => {
+      let attempt = 0;
+      let lastError: any = null;
+      while (attempt <= retries) {
+        attempt++;
+        try {
+          // respect per-request timeout by creating a race with a timeout promise
+          const race = await Promise.race([
+            requestService.sendDualRequests(oldService, newService, api),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), perRequestTimeoutMs))
+          ]);
+          return race as any;
+        } catch (err: any) {
+          lastError = err;
+          // exponential backoff
+          const backoff = Math.min(2000 * attempt, 10000);
+          await new Promise(r => setTimeout(r, backoff));
+        }
       }
-    }
+      throw lastError;
+    };
 
-    setRunning(false);
+    // simple concurrency pool
+    const pool = async (items: ApiConfig[], concurrencyLimit: number) => {
+      const resultsArr: any[] = [];
+      let i = 0;
+
+      const workers = new Array(concurrencyLimit).fill(null).map(async () => {
+        while (true) {
+          const idx = i++;
+          if (idx >= items.length) break;
+          const api = items[idx];
+          try {
+            const dual = await sendWithRetry(api);
+            const diff = diffService.compare(dual.oldService.response, dual.newService.response);
+            const item = {
+              id: `${api.id || api.name}-${Date.now()}-${idx}`,
+              apiConfig: api,
+              oldService: dual.oldService,
+              newService: dual.newService,
+              diffResult: diff,
+              timestamp: Date.now()
+            };
+            resultsArr.push(item);
+            // update UI progressively
+            setResults(prev => [...prev, item]);
+          } catch (err) {
+            console.error('请求失败', api, err);
+            const item = {
+              id: `${api.id || api.name}-${Date.now()}-${idx}`,
+              apiConfig: api,
+              oldService: null,
+              newService: null,
+              diffResult: { identical: false, differences: [{ path: 'request', type: 'modified', oldValue: null, newValue: null }], summary: { statusMatch: false, bodyMatch: false, totalDiffs: 1 } },
+              timestamp: Date.now(),
+              error: String(err)
+            };
+            resultsArr.push(item);
+            setResults(prev => [...prev, item]);
+          }
+        }
+      });
+
+      await Promise.all(workers);
+      return resultsArr;
+    };
+
+    try {
+      await pool(apis, Math.max(1, Math.floor(concurrency)));
+    } finally {
+      setRunning(false);
+    }
   };
 
   return (
@@ -94,6 +149,15 @@ export default function CompareRunner() {
           onChange={e => setApiListText(e.target.value)}
           placeholder='[ { "id": "1", "name": "ping", "url": "/ping", "method": "GET", "parameters": [], "headers": [] } ]'
         />
+      </div>
+
+      <div style={{ marginBottom: 8 }}>
+        <label>并发（Concurrency）: </label>
+        <input value={String(concurrency)} onChange={e => setConcurrency(Number(e.target.value))} style={{ width: 80 }} />
+        <label style={{ marginLeft: 8 }}>重试次数（Retries）: </label>
+        <input value={String(retries)} onChange={e => setRetries(Number(e.target.value))} style={{ width: 80 }} />
+        <label style={{ marginLeft: 8 }}>超时 ms: </label>
+        <input value={String(perRequestTimeoutMs)} onChange={e => setPerRequestTimeoutMs(Number(e.target.value))} style={{ width: 120 }} />
       </div>
 
       <div style={{ marginBottom: 12 }}>

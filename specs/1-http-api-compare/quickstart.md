@@ -31,6 +31,12 @@ npm run dev
 3. 在控制面板（CompareRunner）设置并发、重试与超时策略，然后点击“开始对比”。
 4. 对比完成后，在结果界面查看差异、筛选/分页、并可导出 JSON/HTML 报告或下载 artifacts（`runs/<id>/` 打包）。
 
+性能与配置建议
+
+- 默认并发设置为 `20`（可根据网络与目标服务能力调整）。
+- 如果有大量 endpoints（例如 200+），建议将并发调整为 10-30 并观察网络与目标服务负载。
+- 每次请求可配置超时时间（默认 30000ms）和重试次数（默认 1 次）。
+
 开发与测试
 
 - 核心服务逻辑位于 `src/services/requestService.ts` 与 `src/services/diffService.ts`，可直接在 UI 中调用。  
