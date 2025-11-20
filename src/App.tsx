@@ -8,6 +8,7 @@ import { DiffService } from './services/diffService';
 import { HttpMethod } from './types/api';
 import { Protocol } from './types/service';
 import { nanoid } from 'nanoid';
+import CompareRunner from './components/CompareRunner/CompareRunner';
 
 const { Header, Content } = Layout;
 const { Panel } = Collapse;
@@ -224,6 +225,13 @@ const App: React.FC = () => {
                 />
               </Form.Item>
               
+            </Card>
+          </Col>
+
+          {/* 批量对比控制面板 */}
+          <Col span={24}>
+            <Card title="批量对比 (CompareRunner)" size="small">
+              <CompareRunner />
             </Card>
           </Col>
 
