@@ -1,2 +1,5 @@
-./node_modules
+node_modules
+.github
+.specify
+.vscode
 # 忽略依赖目录\nnode_modules/
