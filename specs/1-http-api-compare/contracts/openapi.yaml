@@ -1,0 +1,65 @@
+openapi: 3.0.3
+info:
+  title: HTTP Compare - Endpoints (stub)
+  version: '1.0.0'
+paths:
+  /compare:
+    post:
+      summary: 对比单个接口（请求到旧/新服务）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompareRequest'
+      responses:
+        '200':
+          description: 比较结果
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Run'
+
+components:
+  schemas:
+    CompareRequest:
+      type: object
+      properties:
+        apiConfig:
+          $ref: '#/components/schemas/ApiConfig'
+        oldService:
+          $ref: '#/components/schemas/ServiceConfig'
+        newService:
+          $ref: '#/components/schemas/ServiceConfig'
+    ApiConfig:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        url: { type: string }
+        method: { type: string }
+        parameters:
+          type: array
+          items: { type: object }
+        headers:
+          type: array
+          items: { type: object }
+    ServiceConfig:
+      type: object
+      properties:
+        protocol: { type: string }
+        host: { type: string }
+        port: { type: integer }
+        token: { type: string }
+        tokenPrefix: { type: string }
+        tokenHeader: { type: string }
+    Run:
+      type: object
+      properties:
+        id: { type: string }
+        timestamp: { type: integer }
+        summary: { type: object }
+        results:
+          type: array
+          items:
+            type: object

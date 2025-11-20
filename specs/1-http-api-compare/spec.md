@@ -68,9 +68,9 @@ An integrator needs to compare endpoints that have different paths or minor sche
 - **FR-005**: System MUST support authentication configuration per target (初始支持 API Key / 静态 Header Token；后续可扩展到 OAuth2 或 mTLS)。
 - **FR-006**: System MUST classify differences by type (e.g., breaking vs. cosmetic) according to configurable rules and tolerance thresholds.
 - **FR-007**: System MUST export reports in at least two machine-readable formats (JSON, CSV) and one human-readable format (HTML or Markdown summary).
-- **FR-008**: System MUST store run history with metadata (time, target base URLs, mapping used) for reproducibility.
-- **FR-009**: System MUST provide a CLI and/or UI entrypoint for running single and batch comparisons.
-- **FR-010**: System MUST surface per-endpoint reproducible request/response pairs so developers can replay failing cases locally.
+-- **FR-008**: System MUST store run history with metadata (time, target base URLs, mapping used) for reproducibility.
+-- **FR-009**: System MUST provide a UI entrypoint for running single and batch comparisons; CLI is out of scope for the initial delivery.
+-- **FR-010**: System MUST surface per-endpoint reproducible request/response pairs so developers can replay failing cases locally.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -109,3 +109,5 @@ An integrator needs to compare endpoints that have different paths or minor sche
 
 - This specification focuses on WHAT the tool must do and WHY; implementation choices (languages, frameworks, storage) are intentionally omitted.
 - If you want the spec in Chinese or need different measurable targets, indicate preferred values for `SC-001` and authentication scope.
+
+- 初始交付为前端 UI 为主的实现（不包含 CLI 或后端服务），后续可按需扩展为桌面或 CLI 选项。
