@@ -4,20 +4,15 @@ import { DiffService } from '../../services/diffService';
 import { ApiConfig } from '../../types/api';
 import { ServiceConfig, Protocol } from '../../types/service';
 import ResponseDiff from '../ResponseDiff';
+import { useServiceStore } from '../../stores/serviceStore';
 
 const requestService = new RequestService();
 const diffService = new DiffService();
 
 export default function CompareRunner() {
   const [apiListText, setApiListText] = useState('');
-  const [oldHost, setOldHost] = useState('localhost');
-  const [oldPort, setOldPort] = useState(80);
-  const [oldClientToken, setOldClientToken] = useState('');
-  const [oldUserToken, setOldUserToken] = useState('');
-  const [newHost, setNewHost] = useState('localhost');
-  const [newPort, setNewPort] = useState(8080);
-  const [newClientToken, setNewClientToken] = useState('');
-  const [newUserToken, setNewUserToken] = useState('');
+  // read services from global store (App 页面中的服务配置会同步写入这里)
+  const { config } = useServiceStore();
   const [running, setRunning] = useState(false);
   const [results, setResults] = useState<any[]>([]);
   const [concurrency, setConcurrency] = useState<number>(20);
@@ -34,24 +29,15 @@ export default function CompareRunner() {
     }
   };
 
-  const buildServiceConfig = (host: string, port: number, clientToken?: string, userToken?: string): ServiceConfig => ({
-    protocol: Protocol.HTTP,
-    host,
-    port,
-    token: '',
-    tokenPrefix: '',
-    tokenHeader: 'Authorization',
-    clientToken: clientToken || undefined,
-    userToken: userToken || undefined
-  });
+  // use config.oldService / config.newService from store when running
 
   const startRun = async () => {
     const apis = parseApiList();
     if (apis.length === 0) return alert('请在文本框中粘贴 ApiConfig 数组（JSON）');
 
     setRunning(true);
-    const oldService = buildServiceConfig(oldHost, Number(oldPort), oldClientToken, oldUserToken);
-    const newService = buildServiceConfig(newHost, Number(newPort), newClientToken, newUserToken);
+    const oldService = config.oldService;
+    const newService = config.newService;
 
     const runResults: any[] = [];
 
@@ -187,32 +173,8 @@ export default function CompareRunner() {
     <div style={{ padding: 12 }}>
       <h3>Compare Runner</h3>
       <div style={{ marginBottom: 8 }}>
-        <label>Old Host: </label>
-        <input value={oldHost} onChange={e => setOldHost(e.target.value)} />
-        <label style={{ marginLeft: 8 }}>Port: </label>
-        <input value={String(oldPort)} onChange={e => setOldPort(Number(e.target.value))} style={{ width: 80 }} />
-        <div style={{ marginTop: 6 }}>
-          <label style={{ marginRight: 8 }}>Old Client Token:</label>
-          <input value={oldClientToken} onChange={e => setOldClientToken(e.target.value)} style={{ width: 300 }} />
-        </div>
-        <div style={{ marginTop: 6 }}>
-          <label style={{ marginRight: 8 }}>Old User Token:</label>
-          <input value={oldUserToken} onChange={e => setOldUserToken(e.target.value)} style={{ width: 300 }} />
-        </div>
-      </div>
-      <div style={{ marginBottom: 8 }}>
-        <label>New Host: </label>
-        <input value={newHost} onChange={e => setNewHost(e.target.value)} />
-        <label style={{ marginLeft: 8 }}>Port: </label>
-        <input value={String(newPort)} onChange={e => setNewPort(Number(e.target.value))} style={{ width: 80 }} />
-        <div style={{ marginTop: 6 }}>
-          <label style={{ marginRight: 8 }}>New Client Token:</label>
-          <input value={newClientToken} onChange={e => setNewClientToken(e.target.value)} style={{ width: 300 }} />
-        </div>
-        <div style={{ marginTop: 6 }}>
-          <label style={{ marginRight: 8 }}>New User Token:</label>
-          <input value={newUserToken} onChange={e => setNewUserToken(e.target.value)} style={{ width: 300 }} />
-        </div>
+        <div>Old Service: {config.oldService.host}:{config.oldService.port}</div>
+        <div>New Service: {config.newService.host}:{config.newService.port}</div>
       </div>
 
       <div style={{ marginBottom: 8 }}>

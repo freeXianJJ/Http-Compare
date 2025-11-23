@@ -3,14 +3,28 @@ import { ApiConfig, HttpMethod, ParamType } from '../types/api';
 import { ServiceConfig } from '../types/service';
 import { RequestInfo, ResponseInfo } from '../types/diff';
 
+export interface RequestConfig {
+  concurrency?: number;
+  retries?: number;
+  timeout?: number;
+}
+
+export const defaultRequestConfig: RequestConfig = {
+  concurrency: 20,
+  retries: 1,
+  timeout: 30000
+};
+
 export class RequestService {
   private axiosInstance: AxiosInstance;
   private useProxy: boolean = false;
   private proxyPrefix: string = '/api';
+  private config: RequestConfig;
 
-  constructor() {
+  constructor(config: RequestConfig = defaultRequestConfig) {
+    this.config = config;
     this.axiosInstance = axios.create({
-      timeout: 30000,
+      timeout: config.timeout ?? defaultRequestConfig.timeout,
       validateStatus: () => true
     });
   }
@@ -212,4 +226,10 @@ export class RequestService {
       newService: newResult
     };
   }
+}
+
+// 兼容导出：简单函数，直接使用默认配置的 RequestService
+export async function sendRequest(service: ServiceConfig, apiConfig: ApiConfig, tokenType?: 'client' | 'user') {
+  const svc = new RequestService();
+  return svc.sendRequest(service, apiConfig, tokenType);
 }

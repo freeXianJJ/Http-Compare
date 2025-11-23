@@ -31,3 +31,22 @@ export interface ApiConfig {
   createdAt: number;
   updatedAt: number;
 }
+
+import { TestResult, DiffResult } from './diff';
+
+export interface RunSummary {
+  passed: number;
+  failed: number;
+  skipped: number;
+}
+
+export interface Run {
+  id: string;
+  startTime: number;
+  endTime?: number;
+  summary: RunSummary;
+  results: TestResult[];
+}
+
+// 比较结果的别名，便于 API 层引用
+export type ComparisonResult = DiffResult;

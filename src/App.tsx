@@ -160,11 +160,18 @@ const App: React.FC = () => {
                         onChange={e => updateOldService({ port: Number(e.target.value) })}
                       />
                     </Form.Item>
-                    <Form.Item label="Token">
+                    <Form.Item label="Client Token">
                       <Input 
-                        value={config.oldService.token}
-                        onChange={e => updateOldService({ token: e.target.value })}
-                        placeholder="可选"
+                        value={(config.oldService as any).clientToken}
+                        onChange={e => updateOldService({ clientToken: e.target.value })}
+                        placeholder="可选 - Bearer"
+                      />
+                    </Form.Item>
+                    <Form.Item label="User Token">
+                      <Input 
+                        value={(config.oldService as any).userToken}
+                        onChange={e => updateOldService({ userToken: e.target.value })}
+                        placeholder="可选 - Bearer"
                       />
                     </Form.Item>
                   </Card>
@@ -184,11 +191,18 @@ const App: React.FC = () => {
                         onChange={e => updateNewService({ port: Number(e.target.value) })}
                       />
                     </Form.Item>
-                    <Form.Item label="Token">
+                    <Form.Item label="Client Token">
                       <Input 
-                        value={config.newService.token}
-                        onChange={e => updateNewService({ token: e.target.value })}
-                        placeholder="可选"
+                        value={(config.newService as any).clientToken}
+                        onChange={e => updateNewService({ clientToken: e.target.value })}
+                        placeholder="可选 - Bearer"
+                      />
+                    </Form.Item>
+                    <Form.Item label="User Token">
+                      <Input 
+                        value={(config.newService as any).userToken}
+                        onChange={e => updateNewService({ userToken: e.target.value })}
+                        placeholder="可选 - Bearer"
                       />
                     </Form.Item>
                   </Card>

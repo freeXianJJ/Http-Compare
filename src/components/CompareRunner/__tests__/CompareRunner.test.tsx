@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import CompareRunner from '../CompareRunner';
+import { test, expect } from 'vitest';
 
 test('renders CompareRunner basic UI', () => {
   render(<CompareRunner />);

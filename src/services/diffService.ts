@@ -153,3 +153,9 @@ export class DiffService {
            typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean';
   }
 }
+
+// 向外兼容的简单函数封装，名称与任务一致
+export function compareResponses(oldResp: ResponseInfo, newResp: ResponseInfo, _mappingRules?: any): DiffResult {
+  const svc = new DiffService();
+  return svc.compare(oldResp, newResp);
+}

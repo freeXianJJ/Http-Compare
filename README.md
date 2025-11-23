@@ -75,6 +75,40 @@ serve -s dist -p 8080
 - [ ] 第二阶段: Swagger导入、批量测试
 - [ ] 第三阶段: 测试历史、环境管理
 
+## 单人开发 Git 工作流（简化）
+
+对于单人项目，可以使用更简单的 git 流程，避免复杂的多人 PR 步骤。推荐两种方式：
+
+- 在 feature 分支完成后 fast-forward 合并到 `main`（保持线性历史）：
+
+```powershell
+git add -A
+git commit -m "feat: 描述"
+git push origin HEAD
+git checkout main
+git pull origin main
+git merge --ff-only <your-feature-branch>
+git push origin main
+```
+
+- 或者直接在 `main` 上提交（对于非常小或个人项目）：
+
+```powershell
+git checkout main
+git pull origin main
+git add -A
+git commit -m "fix: 小改动"
+git push origin main
+```
+
+仓库提供了一个可选脚本 `scripts/git-single-dev.ps1`，可交互执行 commit/push，并可选择把当前分支合并到 `main` 并推送：
+
+```powershell
+pwsh .\\scripts\\git-single-dev.ps1
+```
+
+该脚本适合在 Windows + PowerShell 环境下使用；请在执行前确认本地已安装 `git` 并位于仓库根目录。
+
 ## 许可证
 
 MIT

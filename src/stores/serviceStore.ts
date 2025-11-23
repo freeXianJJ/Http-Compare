@@ -18,7 +18,9 @@ const defaultConfig: ServiceConfig = {
   port: 8080,
   token: '',
   tokenPrefix: 'Bearer',
-  tokenHeader: 'Authorization'
+  tokenHeader: 'Authorization',
+  clientToken: '',
+  userToken: ''
 };
 
 export const useServiceStore = create<ServiceState>()(
